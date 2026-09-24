@@ -57,6 +57,11 @@ const goldens = JSON.parse(
 
 const REL = 1e-6;
 
+/**
+ * The tolerance is 1e-6 relative with a 1e-6 absolute floor:
+ * `REL * max(1, |wanted|)`, so a value at or near zero still gets 1e-6 of
+ * slack rather than being held to bit-identity.
+ */
 function expectRel(actual: ArrayLike<number>, wanted: number[], label: string) {
   expect(actual.length, label).toBe(wanted.length);
   for (let i = 0; i < wanted.length; i++) {
@@ -124,6 +129,11 @@ describe("chunkZRange parity (moczarr.hhdc.chunk_z_range)", () => {
   const minimal = expected("minimal").cells.map((c) =>
     stored(c.h_tdigest as number[][]),
   );
+  /** Our own refusal text, per fit mode, where a golden records an error. */
+  const REFUSAL: Record<string, string> = {
+    raise: "exceeds the fixed window",
+    collapse_bins: 'fit="collapse_bins" cannot grow the window',
+  };
 
   for (const [key, wanted] of Object.entries(goldens.chunk_z_range.windows)) {
     const [fit, nBins, resolution] = key.split(":");
@@ -134,10 +144,11 @@ describe("chunkZRange parity (moczarr.hhdc.chunk_z_range)", () => {
     };
     it(`${key}`, () => {
       if ("error" in wanted) {
-        const head = wanted.error.split(":")[0].replace(/ \[.*$/, "");
-        expect(() => chunkZRange(minimal, options)).toThrow(
-          new RegExp(head.slice(0, 20)),
-        );
+        // The golden records *that* the reference refuses this window; the
+        // message is ours, so assert on a stable substring of it rather
+        // than on Python's wording (which is not a regex, and whose first
+        // characters could be metacharacters).
+        expect(() => chunkZRange(minimal, options)).toThrow(REFUSAL[fit]);
       } else {
         expect(chunkZRange(minimal, options)).toEqual({
           zLo: wanted.z_lo,
