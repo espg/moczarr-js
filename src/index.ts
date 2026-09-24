@@ -76,3 +76,34 @@ export type {
   VlenChunk,
   VlenChunkMetadata,
 } from "./vlen/codec.js";
+
+// Store contract + a plain fetch Range store
+export type {
+  AbsolutePath,
+  AsyncReadable,
+  GetOptions,
+  RangeQuery,
+  RangeReadable,
+} from "./store/types.js";
+export { absolutePath } from "./store/types.js";
+export { HttpStore } from "./store/http.js";
+export type { HttpStoreOptions } from "./store/http.js";
+
+// Store-direct leaf reader (zagg spec section 1.5)
+export { Leaf, openLeaf } from "./leaf/leaf.js";
+export type { DenseValues, OpenLeafOptions } from "./leaf/leaf.js";
+export { RaggedArray, emptyCell } from "./leaf/ragged.js";
+export { parseRaggedGeometry, parseRaggedMetadata } from "./leaf/metadata.js";
+export type {
+  CodecDecl,
+  RaggedGeometry,
+  RaggedMetadata,
+} from "./leaf/metadata.js";
+export {
+  parseShardIndex,
+  readShardChunk,
+  readShardIndex,
+  shardIndexBytes,
+} from "./leaf/shard.js";
+export type { ChunkSpan } from "./leaf/shard.js";
+export { crc32c } from "./leaf/crc32c.js";
