@@ -246,6 +246,12 @@ export interface BinnedCells {
  * `(cells, bins)` row-major float64 tensor -- the browser twin of the
  * per-cell loop in `moczarr.hhdc.read_tensors` (`rint` to counts, or keep
  * fractions for a `flux` payload, is the caller's dtype decision).
+ *
+ * Rows come back in cells-axis (nested-rank) order -- the order the leaf
+ * stores them in, not a raster scan. Laying them out as a spatial
+ * `(side, side)` image needs mortie section 8's bit-deinterleave
+ * (`moczarr.hhdc.rank_to_rowcol`); `divmod(rank, side)` looks right and is
+ * silently wrong. No deinterleave is provided here.
  */
 export function castToBins(
   digests: ArrayLike<Digest>,

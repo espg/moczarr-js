@@ -126,6 +126,11 @@ bin edges, `(cells, bins)` counts. What a bin value _means_ is the payload's
 §2.0 `weights` declaration (`RaggedArray.metadata.weights`): an observation
 count under `counts`, a photoelectron estimate under `flux`.
 
+`castToBins` rows are in cells-axis (nested-rank) order, not a raster scan:
+laying them out as a spatial `(side, side)` image needs mortie §8's
+bit-deinterleave (`moczarr.hhdc.rank_to_rowcol`), and `divmod(rank, side)`
+is a silently wrong answer. This package does not provide the deinterleave.
+
 ## Boundaries
 
 - **healpix-geo** owns cell ids and geometry. The packed-word codec in
