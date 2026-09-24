@@ -81,7 +81,7 @@ describe("VlenNdarrayCodec", () => {
   it("reports an element-count mismatch against the chunk shape", () => {
     const codec = new VlenNdarrayCodec([4]);
     expect(() => codec.decode(GOLDEN)).toThrow(
-      /framed element count 3 must equal the product of the chunk shape \[4\]/,
+      /chunk shape \[4\]: vlen chunk frames 3 cells, not the 4/,
     );
   });
 

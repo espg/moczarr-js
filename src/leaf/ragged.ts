@@ -165,10 +165,15 @@ export class RaggedArray {
       return Array.from({ length: n }, () => emptyCell(this.element));
     }
     const framed = this.geometry.zstd ? decodeZstd(stored) : stored;
-    const cells = decodeVlenNdarray(framed, this.element);
-    if (cells.length !== this.cellsPerChunk) {
+    let cells: RaggedCell[];
+    try {
+      // The chunk shape is the expected frame count, checked on the wire
+      // count before the decoder allocates against it.
+      cells = decodeVlenNdarray(framed, this.element, this.cellsPerChunk);
+    } catch (err) {
       throw new Error(
-        `${this.objectKey(k)}: chunk ${k} framed ${cells.length} cells, the chunk shape says ${this.cellsPerChunk}`,
+        `${this.objectKey(k)}: chunk ${k}: ${(err as Error).message}`,
+        { cause: err },
       );
     }
     return n === cells.length ? cells : cells.slice(0, n);
