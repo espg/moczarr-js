@@ -143,12 +143,29 @@ export class VlenNdarrayCodec {
   }
 }
 
+export interface RegisterOptions {
+  /** Replace a name the registry already carries (default: leave it). */
+  override?: boolean;
+}
+
 /**
  * Register the codecs under both names on a zarrita registry:
  * `registerVlenCodecs(zarr.registry)`.
+ *
+ * A name already on the registry is left alone unless `override` is set.
+ * zarrita 0.7 ships neither name (it registers `vlen-utf8` only), so this
+ * is purely additive today; if upstream adds one, replacing it for every
+ * array in the process should be the caller's deliberate choice, not a
+ * side effect of this helper.
  */
-export function registerVlenCodecs(registry: CodecRegistry): void {
+export function registerVlenCodecs(
+  registry: CodecRegistry,
+  options: RegisterOptions = {},
+): void {
   const entry = () => Promise.resolve(VlenNdarrayCodec);
-  registry.set(VLEN_NDARRAY_CODEC, entry);
-  registry.set(VLEN_BYTES_CODEC, entry);
+  for (const name of [VLEN_NDARRAY_CODEC, VLEN_BYTES_CODEC]) {
+    if (options.override === true || !registry.has(name)) {
+      registry.set(name, entry);
+    }
+  }
 }
