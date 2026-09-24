@@ -108,3 +108,22 @@ export {
 } from "./leaf/shard.js";
 export type { ChunkSpan } from "./leaf/shard.js";
 export { crc32c } from "./leaf/crc32c.js";
+
+// t-digest cast (zagg spec section 2; kernels mirror moczarr.tdigest / moczarr.hhdc)
+export {
+  binDigest,
+  binEdges,
+  castToBins,
+  cdfFromTdigest,
+  chunkZRange,
+  digestFromCell,
+  quantileFromTdigest,
+  totalWeight,
+} from "./tdigest/tdigest.js";
+export type {
+  BinnedCells,
+  Digest,
+  FitMode,
+  ZRangeOptions,
+  ZWindow,
+} from "./tdigest/tdigest.js";
