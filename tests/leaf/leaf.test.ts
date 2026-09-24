@@ -167,3 +167,18 @@ describe("openLeaf on column/ (unsharded per-chunk geometry)", () => {
     cells.forEach((cell, i) => expect(cell.data).toEqual(f32(rows[i])));
   });
 });
+
+describe("readDense over a span", () => {
+  it("fetches only the covering inner chunk", async () => {
+    const exp = expected("minimal");
+    const s = new FileStore(`${SPEC_ROOT}minimal`);
+    const leaf = await openLeaf(s, exp.leaf);
+    await leaf.dense("count"); // metadata
+    s.log.length = 0;
+    const tail = await leaf.readDense("count", [12, 16]);
+    expect(tail.shape).toEqual([4]);
+    expect(Array.from(tail.data as Int32Array)).toEqual([0, 0, 0, 300]);
+    const ranged = s.log.filter(([, r]) => r !== null);
+    expect(ranged).toHaveLength(2); // index suffix + one inner chunk
+  });
+});
