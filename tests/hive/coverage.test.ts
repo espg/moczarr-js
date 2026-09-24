@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  MAX_COVERAGE_IDS,
   coveredLeafPaths,
   parseRootCoverage,
   rangesContain,
@@ -131,6 +132,27 @@ describe("rangesShardIds", () => {
       ),
     ).toThrow(/\[first, last\] pair/);
   });
+
+  it("refuses an over-wide envelope instead of hanging the tab", () => {
+    // One full base cell at order 12: 4**12 = 16,777,216 ids (~1.4 GB of
+    // strings). The width is summed before anything is allocated, so this
+    // throws in microseconds rather than OOMing.
+    const huge = envelope({
+      order: 12,
+      ranges: [["4111111111111", "4444444444444"]],
+    });
+    expect(() => rangesShardIds(huge)).toThrow(
+      /coverage expands to 16777216 shard ids \(limit 1048576\)/,
+    );
+    expect(() => rangesShardIds(huge)).toThrow(/rangesContain/);
+    // The ceiling is a parameter, and it sums widths across ranges.
+    expect(() => rangesShardIds(envelope(), 5)).toThrow(
+      /coverage expands to 6 shard ids \(limit 5\)/,
+    );
+    expect(rangesShardIds(envelope(), 6)).toEqual(SERC_SHARDS);
+    expect(rangesShardIds(envelope())).toEqual(SERC_SHARDS);
+    expect(MAX_COVERAGE_IDS).toBe(1024 * 1024);
+  });
 });
 
 describe("rangesContain", () => {
@@ -183,5 +205,12 @@ describe("coveredLeafPaths (MOC-first arithmetic enumeration)", () => {
         "2019",
       ),
     ).toEqual(["4/331/422/4331422_2019.zarr"]);
+  });
+
+  it("inherits the expansion ceiling", () => {
+    expect(() => coveredLeafPaths(manifest, envelope(), null, 5)).toThrow(
+      /coverage expands to 6 shard ids \(limit 5\)/,
+    );
+    expect(coveredLeafPaths(manifest, envelope(), null, 6)).toHaveLength(6);
   });
 });

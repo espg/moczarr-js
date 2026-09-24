@@ -26,6 +26,7 @@ export {
 export type { RootClassification } from "./hive/hive.js";
 export {
   COVERAGE_SPEC,
+  MAX_COVERAGE_IDS,
   ROOT_COVERAGE_NAME,
   coveredLeafPaths,
   parseRootCoverage,
