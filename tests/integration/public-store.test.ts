@@ -8,7 +8,9 @@
  * Reads: morton_hive.json, the leaf's zarr.json, two array zarr.json
  * files, the count shard's 4,100-byte index suffix plus ONE 16 KiB inner
  * chunk, and the digest shard's index suffix plus ONE populated inner
- * chunk. Nothing else.
+ * chunk. Nothing else: the test asserts every object read came back 206
+ * and that they sum under OBJECT_BYTE_BUDGET, so an origin that ignores
+ * Range fails the test instead of quietly pulling a whole shard.
  */
 import { describe, expect, it } from "vitest";
 
@@ -28,17 +30,35 @@ const STORE_URL =
   "https://data.source.coop/englacial/zagg/demo/atl03_tdigest_o9_v2.zarr/";
 const LEAF = "3/2/1/3/2/4/4/4/2/4/3213244424.zarr";
 const enabled = process.env.MOCZARR_JS_INTEGRATION === "1";
+/**
+ * Hard ceiling on the object bytes this test may pull. The observed run
+ * reads 78,556: 4,100 + 53,972 (the digest shard's index suffix and one
+ * inner chunk) + 4,100 + 16,384 (the count shard's). A whole shard object
+ * is orders of magnitude larger, so a fallback to a full-object read
+ * cannot pass under this.
+ */
+const OBJECT_BYTE_BUDGET = 262_144;
+
+interface Logged {
+  path: string;
+  range: string | null;
+  status: number;
+  bytes: number;
+}
 
 describe.skipIf(!enabled)("public demo store (integration)", () => {
   it("reads one leaf's count chunk and one ragged chunk with ranged GETs", async () => {
-    const requests: [string, string | null][] = [];
+    const requests: Logged[] = [];
     const store = new HttpStore(STORE_URL, {
-      fetch: (request) => {
-        requests.push([
-          new URL(request.url).pathname,
-          request.headers.get("range"),
-        ]);
-        return fetch(request);
+      fetch: async (request) => {
+        const response = await fetch(request);
+        requests.push({
+          path: new URL(request.url).pathname,
+          range: request.headers.get("range"),
+          status: response.status,
+          bytes: Number(response.headers.get("content-length") ?? 0),
+        });
+        return response;
       },
     });
 
@@ -101,15 +121,25 @@ describe.skipIf(!enabled)("public demo store (integration)", () => {
     );
     expect(binned.shape).toEqual([4096, 128]);
 
-    // Every object read was ranged; the index suffix is exactly 4,100 bytes.
-    const objectReads = requests.filter(([path]) => /\/c\/\d+$/.test(path));
+    // Every object read was ranged *and answered ranged*: a 200 here means
+    // the origin ignored the header and sent the whole object (HttpStore
+    // slices the window out, so the read still succeeds -- silently pulling
+    // a whole shard). Assert on the response, then on the bytes.
+    const objectReads = requests.filter((r) => /\/c\/\d+$/.test(r.path));
     expect(objectReads.length).toBe(4);
-    expect(objectReads.every(([, range]) => range !== null)).toBe(true);
-    expect(objectReads.filter(([, r]) => r === "bytes=-4100")).toHaveLength(2);
+    expect(objectReads.map((r) => r.range)).not.toContain(null);
+    expect(objectReads.map((r) => r.status)).toEqual([206, 206, 206, 206]);
+    expect(objectReads.filter((r) => r.range === "bytes=-4100")).toHaveLength(
+      2,
+    );
+    const objectBytes = objectReads.reduce((n, r) => n + r.bytes, 0);
+    expect(objectBytes).toBeGreaterThan(0);
+    expect(objectBytes).toBeLessThanOrEqual(OBJECT_BYTE_BUDGET);
     console.log(
       JSON.stringify({
         chunk: k,
         populatedCells: populated.length,
+        objectBytes,
         window,
         requests,
       }),
