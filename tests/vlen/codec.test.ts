@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import * as zarr from "zarrita";
 
 import {
+  type CodecRegistry,
   VLEN_BYTES_CODEC,
   VLEN_NDARRAY_CODEC,
   VlenNdarrayCodec,
@@ -99,5 +100,22 @@ describe("registerVlenCodecs on zarrita's registry", () => {
       const entry = (await loader!()) as typeof VlenNdarrayCodec;
       expect(entry.fromConfig).toBe(VlenNdarrayCodec.fromConfig);
     }
+  });
+
+  it("leaves an entry the registry already carries alone", () => {
+    const theirs = () => Promise.resolve("someone else's codec");
+    const registry: CodecRegistry = new Map([[VLEN_BYTES_CODEC, theirs]]);
+    registerVlenCodecs(registry);
+    expect(registry.get(VLEN_BYTES_CODEC)).toBe(theirs);
+    expect(registry.get(VLEN_NDARRAY_CODEC)).toBeDefined();
+  });
+
+  it("replaces it under override", async () => {
+    const theirs = () => Promise.resolve("someone else's codec");
+    const registry: CodecRegistry = new Map([[VLEN_BYTES_CODEC, theirs]]);
+    registerVlenCodecs(registry, { override: true });
+    const loader = registry.get(VLEN_BYTES_CODEC);
+    expect(loader).not.toBe(theirs);
+    expect(await loader!()).toBe(VlenNdarrayCodec);
   });
 });
