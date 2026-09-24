@@ -1,0 +1,70 @@
+{
+  "name": "moczarr-js",
+  "version": "0.0.0",
+  "description": "Browser/TypeScript reader for morton-hive zarr leaves: hive arithmetic, vlen-ndarray decode, t-digest cast",
+  "engines": {
+    "node": ">=20"
+  },
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write ."
+  },
+  "keywords": [
+    "zarr",
+    "zarrita",
+    "healpix",
+    "morton",
+    "moczarr",
+    "t-digest"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "fzstd": "^0.1.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@types/node": "^20.0.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.4.0",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^3.0.0",
+    "zarrita": "^0.7.0"
+  },
+  "peerDependencies": {
+    "zarrita": "^0.7.0"
+  },
+  "peerDependenciesMeta": {
+    "zarrita": {
+      "optional": true
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/espg/moczarr-js.git"
+  },
+  "homepage": "https://github.com/espg/moczarr-js#readme",
+  "bugs": {
+    "url": "https://github.com/espg/moczarr-js/issues"
+  }
+}

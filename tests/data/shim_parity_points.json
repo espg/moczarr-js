@@ -1,0 +1,12 @@
+{
+  "comment": "POINT-store parity, the one axis the retired shim uniquely existed for: a point store declares cell_order 29, but the shim's fabricate_cell_ids clipped its words to order 24 and _served_refinement_level served 24 \u2014 NOT the manifest order. The SERC parity fixture (shim_parity_serc.json) is an order-8 AREA shard, where the shim level and the decoded order agree trivially, so it cannot pin this axis. HAND-ADDED (espg/gridlook#8 fold review), because the shim is deleted: shim_cell_ids come from the shim's exact ground truth \u2014 moczarr.fabricate.fabricate_cell_ids, the function it called \u2014 over the golden order-29 point words of moczarr's test_convention (the same two used in jupyter/tests/test_hive.py), and shim_refinement_level is what _served_refinement_level returned for them, read off the deleted source at git rev 08d09a0 (is_point -> _FLOAT64_EXACT_MAX_ORDER, and max_id 3066421510989028 < 12*4**24 so the float64 guard passed). Reproduce the ids with:  python -c \"import numpy as np; from moczarr.fabricate import fabricate_cell_ids; print(fabricate_cell_ids(np.array([4733760060091642301, 13712984013617909360], dtype=np.uint64)))\"",
+  "generated_with": {
+    "moczarr": "0.8.0",
+    "mortie": "1.0.0"
+  },
+  "morton_words": ["4733760060091642301", "13712984013617909360"],
+  "word_labels": ["point_north (suffix 61)", "point_south (suffix 48)"],
+  "manifest_refinement_level": 29,
+  "shim_refinement_level": 24,
+  "shim_cell_ids": [874228162960155, 3066421510989028]
+}
