@@ -146,7 +146,15 @@ export class RaggedArray {
       : readShardChunk(this.#rangeStore(), key, span, opts);
   }
 
-  /** Cells of inner chunk `k`, decoded; an absent chunk is all-empty cells. */
+  /**
+   * Cells of inner chunk `k`, decoded; an absent chunk is all-empty cells.
+   *
+   * A stored chunk always frames the full `cellsPerChunk`: zarr materializes
+   * an edge chunk at the whole chunk shape and pads the overhang with the
+   * fill value, so a trailing partial chunk carries pad cells the axis does
+   * not have. They are dropped here, and the absent branch is sized the same
+   * way, so either path returns the cells the axis actually holds.
+   */
   async readChunk(k: number, opts?: GetOptions): Promise<RaggedCell[]> {
     const stored = await this.chunkBytes(k, opts);
     const n = Math.min(
@@ -158,12 +166,12 @@ export class RaggedArray {
     }
     const framed = this.geometry.zstd ? decodeZstd(stored) : stored;
     const cells = decodeVlenNdarray(framed, this.element);
-    if (cells.length !== n) {
+    if (cells.length !== this.cellsPerChunk) {
       throw new Error(
-        `${this.objectKey(k)}: chunk ${k} framed ${cells.length} cells, the axis geometry says ${n}`,
+        `${this.objectKey(k)}: chunk ${k} framed ${cells.length} cells, the chunk shape says ${this.cellsPerChunk}`,
       );
     }
-    return cells;
+    return n === cells.length ? cells : cells.slice(0, n);
   }
 
   /** Cells `[start, stop)`: only the covering chunks are fetched (spec section 1.5 spans). */
