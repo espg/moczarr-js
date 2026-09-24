@@ -17,9 +17,16 @@ client needs, the sibling of [moczarr](https://github.com/espg/moczarr)
 
 ## Getting Started
 
+Not yet published to npm; install from the repository until the first
+release:
+
 ```bash
-npm install moczarr-js zarrita
+npm install github:espg/moczarr-js zarrita
 ```
+
+`zarrita` is an optional peer — the package needs it only for the dense
+path (`leaf.dense` / `leaf.readDense`, imported lazily); hive arithmetic,
+the vlen decode and the ragged store-direct reads work without it.
 
 ```typescript
 import {
