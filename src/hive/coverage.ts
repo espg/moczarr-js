@@ -29,6 +29,16 @@ import type { HiveManifest } from "./manifest.js";
 export const COVERAGE_SPEC = "morton-moc/1";
 /** Root coverage object name at a store/product root. */
 export const ROOT_COVERAGE_NAME = "coverage.moc";
+/**
+ * Default ceiling on the shard ids one envelope may expand to (2**20). The
+ * envelope is fetched JSON, so its width is remote-controlled: a single
+ * full-base range at order 12 is 16.8 M ids (~1.4 GB of strings) and order
+ * 14+ never returns -- a dead tab, not a loud failure. Real stores sit ~2
+ * orders below the ceiling (a shard-order-6 base cell is 4,096 ids);
+ * callers that genuinely want more pass `maxIds`, and membership needs no
+ * expansion at all (rangesContain).
+ */
+export const MAX_COVERAGE_IDS = 1 << 20;
 
 export interface RootCoverage {
   spec: string;
@@ -131,11 +141,31 @@ function checkRange(range: unknown, order: number): [string, number, number] {
  * The covered shard ids, expanded exactly from the envelope's ranges --
  * ascending within each range by construction (consecutive digit-tail
  * rank). O(covered shards); containment checks should use rangesContain.
+ *
+ * The total width is summed and checked against `maxIds` BEFORE anything is
+ * allocated, so an over-wide envelope fails loudly rather than hanging the
+ * tab -- same posture as checkRange, which is the only other place a
+ * mangled cache can bite.
  */
-export function rangesShardIds(envelope: RootCoverage): string[] {
+export function rangesShardIds(
+  envelope: RootCoverage,
+  maxIds: number = MAX_COVERAGE_IDS,
+): string[] {
+  const checked = envelope.ranges.map((range) =>
+    checkRange(range, envelope.order),
+  );
+  let total = 0;
+  for (const [, loRank, hiRank] of checked) {
+    total += hiRank - loRank + 1;
+  }
+  if (total > maxIds) {
+    throw new Error(
+      `coverage expands to ${total} shard ids (limit ${maxIds}); ` +
+        `use rangesContain for membership`,
+    );
+  }
   const ids: string[] = [];
-  for (const range of envelope.ranges) {
-    const [base, loRank, hiRank] = checkRange(range, envelope.order);
+  for (const [base, loRank, hiRank] of checked) {
     for (let r = loRank; r <= hiRank; r++) {
       ids.push(base + rankTail(r, envelope.order));
     }
@@ -163,12 +193,16 @@ export function rangesContain(
  * The store-relative leaf path of every covered shard -- the MOC-first
  * arithmetic enumeration (manifest + root MOC, zero LISTs) the phase-6c
  * data path consumes. `window` selects the windowed leaf under /2 and /3
- * manifests.
+ * manifests; `maxIds` is the expansion ceiling of rangesShardIds, which
+ * this inherits.
  */
 export function coveredLeafPaths(
   manifest: HiveManifest,
   envelope: RootCoverage,
   window?: string | null,
+  maxIds: number = MAX_COVERAGE_IDS,
 ): string[] {
-  return rangesShardIds(envelope).map((id) => leafPath(manifest, id, window));
+  return rangesShardIds(envelope, maxIds).map((id) =>
+    leafPath(manifest, id, window),
+  );
 }
