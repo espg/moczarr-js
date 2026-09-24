@@ -38,6 +38,27 @@ describe("VlenNdarrayCodec", () => {
     expect(Array.from(cells[2].data as Float32Array)).toEqual([5.5, 6.5]);
   });
 
+  it("takes the element off the codec configuration (the pipeline route)", () => {
+    // What zarrita actually passes: the configuration verbatim, and its own
+    // parsed DataType string rather than the raw ndarray JSON.
+    const codec = VlenNdarrayCodec.fromConfig(
+      { dtype: "float32", shape: [null, 2] },
+      { dataType: "variable_length_bytes", shape: [3] },
+    );
+    expect(codec.element).toEqual({ dtype: "float32", innerShape: [2] });
+    const cells = codec.decode(GOLDEN).data as RaggedCell[];
+    expect(Array.from(cells[2].data as Float32Array)).toEqual([5.5, 6.5]);
+  });
+
+  it("refuses a malformed element on the configuration route", () => {
+    expect(() =>
+      VlenNdarrayCodec.fromConfig(
+        { dtype: "float32", shape: [2] },
+        { dataType: "variable_length_bytes", shape: [3] },
+      ),
+    ).toThrow(/declares element shape \[2\]/);
+  });
+
   it("decodes raw payload bytes under variable_length_bytes (the /1 dtype)", () => {
     const codec = VlenNdarrayCodec.fromConfig(
       {},
