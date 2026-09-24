@@ -41,3 +41,38 @@ export {
   rankTail,
   renderMortonDecimal,
 } from "./hive/decimal.js";
+
+// vlen-ndarray decode (zagg spec sections 1.2-1.4 and 6)
+export {
+  NDARRAY_DTYPE,
+  RAGGED_ATTR,
+  RAGGED_SPEC,
+  parseNdarrayDataType,
+  parseRaggedAttrs,
+  raggedElementOf,
+  rowBytes,
+} from "./vlen/element.js";
+export type {
+  ElementArray,
+  RaggedCell,
+  RaggedElement,
+  ScalarDtype,
+} from "./vlen/element.js";
+export {
+  decodeCell,
+  decodeRaggedChunk,
+  decodeVlenFrames,
+  decodeVlenNdarray,
+  decodeZstd,
+} from "./vlen/framing.js";
+export {
+  VLEN_BYTES_CODEC,
+  VLEN_NDARRAY_CODEC,
+  VlenNdarrayCodec,
+  registerVlenCodecs,
+} from "./vlen/codec.js";
+export type {
+  CodecRegistry,
+  VlenChunk,
+  VlenChunkMetadata,
+} from "./vlen/codec.js";
