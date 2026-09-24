@@ -168,6 +168,17 @@ describe("rangesContain", () => {
     expect(rangesContain(envelope(), "43314221")).toBe(false);
     expect(rangesContain(envelope(), "433142")).toBe(false);
   });
+
+  it("throws on a non-id instead of reporting a silent miss", () => {
+    // A typo'd id used to read as "not covered", indistinguishable from a
+    // genuine miss -- and per coveredLeafPaths that is a leaf never fetched.
+    expect(() => rangesContain(envelope(), "4331a22")).toThrow(
+      /malformed decimal morton id/,
+    );
+    expect(() => rangesContain(envelope(), "")).toThrow(
+      /malformed decimal morton id/,
+    );
+  });
 });
 
 describe("coveredLeafPaths (MOC-first arithmetic enumeration)", () => {

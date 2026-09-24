@@ -173,7 +173,12 @@ export function rangesShardIds(
   return [...new Set(ids)];
 }
 
-/** Whether the envelope's ranges list one shard id -- O(ranges). */
+/**
+ * Whether the envelope's ranges list one shard id -- O(ranges). A
+ * well-formed id at the wrong order is simply not covered (false); an id
+ * that is not a decimal morton id at all throws, because a silent false
+ * there is a leaf that is never fetched (decimal.ts grammar gate).
+ */
 export function rangesContain(
   envelope: RootCoverage,
   shardId: string,

@@ -23,17 +23,40 @@ import {
 
 const DECIMAL_RE = /^(-?)([1-6])([1-4]*)(p?)$/;
 
+/**
+ * The unmarked decimal grammar -- what a cell/shard id on a path or a
+ * coverage endpoint looks like. The "p" kind suffix is render-only and
+ * carries no order digit, so it is not an id the string helpers below can
+ * measure; parseMortonDecimal (DECIMAL_RE) is the one place it is legal.
+ */
+const DECIMAL_ID_RE = /^-?[1-6][1-4]*$/;
+
 const PREFIX_SHIFT = 60n;
 const SUFFIX_BITS = 6n;
 
+/**
+ * Grammar gate for the string helpers. These are public entry points, so a
+ * typo'd or externally-sourced id must be loud here rather than answer
+ * plausible nonsense downstream (decimalOrder("not-an-id") -> 8, and thence
+ * a rangesContain miss indistinguishable from genuine non-coverage). O(1)
+ * and not hot: coverage.ts's callers pass endpoints checkRange has already
+ * validated by construction.
+ */
+function checkDecimal(id: string): string {
+  if (!DECIMAL_ID_RE.test(id)) {
+    throw new Error(`malformed decimal morton id ${JSON.stringify(id)}`);
+  }
+  return id;
+}
+
 /** HEALPix order of a decimal id: one digit per level past the base. */
 export function decimalOrder(id: string): number {
-  return id.length - (id.startsWith("-") ? 2 : 1);
+  return checkDecimal(id).length - (id.startsWith("-") ? 2 : 1);
 }
 
 /** The {sign+base} component of a decimal id ("-5" of "-5112333"). */
 export function decimalBase(id: string): string {
-  return id.slice(0, id.startsWith("-") ? 2 : 1);
+  return checkDecimal(id).slice(0, id.startsWith("-") ? 2 : 1);
 }
 
 /**
@@ -45,7 +68,7 @@ export function decimalBase(id: string): string {
  */
 export function decimalRank(id: string): number {
   let rank = 0;
-  for (const ch of id.slice(decimalBase(id).length)) {
+  for (const ch of checkDecimal(id).slice(decimalBase(id).length)) {
     rank = rank * 4 + (Number(ch) - 1);
   }
   return rank;

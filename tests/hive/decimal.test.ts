@@ -127,4 +127,19 @@ describe("decimal helpers", () => {
       expect(rankTail(decimalRank(id), tail.length)).toBe(tail);
     }
   });
+
+  it("is loud on a non-id rather than answering plausible nonsense", () => {
+    // Before the gate these answered order 8, base "n" and NaN respectively.
+    for (const bad of ["not-an-id", "", "0331", "4331a11", "7", "-", "43315"]) {
+      expect(() => decimalOrder(bad)).toThrow(/malformed decimal morton id/);
+      expect(() => decimalBase(bad)).toThrow(/malformed decimal morton id/);
+      expect(() => decimalRank(bad)).toThrow(/malformed decimal morton id/);
+    }
+    // The "p" kind suffix is render/interchange-only and carries no order
+    // digit, so it is not an id these string helpers can measure --
+    // parseMortonDecimal is the one place it is legal.
+    expect(() => decimalOrder(`4${"1".repeat(29)}p`)).toThrow(
+      /malformed decimal morton id/,
+    );
+  });
 });
