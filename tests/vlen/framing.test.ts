@@ -60,6 +60,19 @@ describe("decodeVlenFrames (spec section 1.4 framing)", () => {
     expect(frames.map((f) => f.byteLength)).toEqual([16, 0, 8]);
   });
 
+  it("checks an expected count before allocating against the wire count", () => {
+    const raw = hex(goldens.cases.golden_framing.raw_hex);
+    expect(decodeVlenFrames(raw, 3)).toHaveLength(3);
+    expect(() => decodeVlenFrames(raw, 4)).toThrow(/frames 3 cells, not the 4/);
+    // The guard reads the u32 alone, so a hostile count never reaches an
+    // allocation keyed off it.
+    const hostile = new Uint8Array(4);
+    new DataView(hostile.buffer).setUint32(0, 0xffffffff, true);
+    expect(() => decodeVlenFrames(hostile, 4096)).toThrow(
+      /frames 4294967295 cells/,
+    );
+  });
+
   it("is loud on a truncated or over-long chunk", () => {
     const raw = hex(goldens.cases.golden_framing.raw_hex);
     expect(() => decodeVlenFrames(raw.subarray(0, 3))).toThrow(/too short/);

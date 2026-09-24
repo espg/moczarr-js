@@ -30,8 +30,16 @@ import {
 /**
  * Split one framed chunk into its per-cell payload byte views (zero-copy
  * subarrays of `bytes`). Throws on a truncated frame.
+ *
+ * `expectedCount` is the cell count the caller's geometry says the chunk
+ * must carry. The framed count is an untrusted u32 (up to 4,294,967,295),
+ * so where the caller knows the answer the two are compared *before* any
+ * allocation keyed off it.
  */
-export function decodeVlenFrames(bytes: Uint8Array): Uint8Array[] {
+export function decodeVlenFrames(
+  bytes: Uint8Array,
+  expectedCount?: number,
+): Uint8Array[] {
   if (bytes.byteLength < 4) {
     throw new Error(
       `vlen chunk is ${bytes.byteLength} bytes: too short for the u32 cell count`,
@@ -39,6 +47,11 @@ export function decodeVlenFrames(bytes: Uint8Array): Uint8Array[] {
   }
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const count = view.getUint32(0, true);
+  if (expectedCount !== undefined && count !== expectedCount) {
+    throw new Error(
+      `vlen chunk frames ${count} cells, not the ${expectedCount} the geometry says`,
+    );
+  }
   const cells: Uint8Array[] = new Array(count);
   let pos = 4;
   for (let i = 0; i < count; i++) {
@@ -106,8 +119,11 @@ export function decodeCell(
 export function decodeVlenNdarray(
   bytes: Uint8Array,
   element: RaggedElement,
+  expectedCount?: number,
 ): RaggedCell[] {
-  return decodeVlenFrames(bytes).map((payload) => decodeCell(payload, element));
+  return decodeVlenFrames(bytes, expectedCount).map((payload) =>
+    decodeCell(payload, element),
+  );
 }
 
 /** zstd-decode one stored chunk object (section 1.3's compressor). */
@@ -122,6 +138,7 @@ export function decodeZstd(compressed: Uint8Array): Uint8Array {
 export function decodeRaggedChunk(
   compressed: Uint8Array,
   element: RaggedElement,
+  expectedCount?: number,
 ): RaggedCell[] {
-  return decodeVlenNdarray(decodeZstd(compressed), element);
+  return decodeVlenNdarray(decodeZstd(compressed), element, expectedCount);
 }

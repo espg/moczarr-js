@@ -117,12 +117,17 @@ export class VlenNdarrayCodec {
   }
 
   decode(bytes: Uint8Array): VlenChunk<RaggedCell> | VlenChunk<Uint8Array> {
-    const payloads = decodeVlenFrames(bytes);
+    // The product of the chunk shape is the expected frame count; the
+    // decoder checks it against the wire count before allocating.
     const expected = this.shape.reduce((n, d) => n * d, 1);
-    if (payloads.length !== expected) {
+    let payloads: Uint8Array[];
+    try {
+      payloads = decodeVlenFrames(bytes, expected);
+    } catch (err) {
       throw new Error(
-        `${VLEN_NDARRAY_CODEC}: framed element count ${payloads.length} must ` +
-          `equal the product of the chunk shape [${this.shape.join(", ")}] (${expected})`,
+        `${VLEN_NDARRAY_CODEC} over chunk shape [${this.shape.join(", ")}]: ` +
+          `${(err as Error).message}`,
+        { cause: err },
       );
     }
     const stride = cStrides(this.shape);
