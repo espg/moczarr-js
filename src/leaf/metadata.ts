@@ -41,6 +41,12 @@ export interface RaggedMetadata {
   times: string | null;
   /** The spec 2.0 weights declaration (absent reads as "counts"). */
   weights: "counts" | "flux";
+  /**
+   * The spec 2.0 `gain` block a `flux` payload carries -- the calibration
+   * its photoelectron estimate was produced under. Null when the array
+   * declares none, as a `counts` payload does.
+   */
+  gain: Record<string, unknown> | null;
   attributes: Record<string, unknown>;
 }
 
@@ -179,6 +185,7 @@ export function parseRaggedMetadata(
   const locations = block["locations"];
   const times = attributes["times"];
   const weights = attributes["weights"] ?? "counts";
+  const gain = attributes["gain"];
   if (typeof weights !== "string" || !WEIGHTS.has(weights)) {
     throw new Error(
       `${field} declares weights ${JSON.stringify(weights)}; spec section 2.0 defines ` +
@@ -191,6 +198,10 @@ export function parseRaggedMetadata(
     locations: typeof locations === "string" && locations ? locations : null,
     times: typeof times === "string" && times ? times : null,
     weights: weights as "counts" | "flux",
+    gain:
+      typeof gain === "object" && gain !== null && !Array.isArray(gain)
+        ? (gain as Record<string, unknown>)
+        : null,
     attributes,
   };
 }
