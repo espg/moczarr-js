@@ -149,8 +149,9 @@ count under `counts`, a photoelectron estimate under `flux`.
   against the committed `*.expected.json`.
 - t-digest kernels: `moczarr.tdigest` / `moczarr.hhdc` outputs over those
   same digests plus edge cases, asserted to 1e-6 relative (observed
-  ≤ 1e-12; the residual is numpy's FMA contraction), regenerable with
-  `scripts/generate_tdigest_fixtures.py`.
+  ≤ 1e-12; the residual is summation order — numpy's `sum()` is pairwise
+  above 8 elements where these kernels sum sequentially — plus any FMA
+  contraction), regenerable with `scripts/generate_tdigest_fixtures.py`.
 
 The Python package stays the reference; this one follows it.
 

@@ -59,7 +59,15 @@ export function digestFromCell(
   return { means, weights };
 }
 
-/** Total weight: the exact observation count under a `counts` payload. */
+/**
+ * Total weight: the exact observation count under a `counts` payload.
+ *
+ * Summed sequentially. numpy's `weights.sum()` -- what `cdf_from_tdigest`
+ * and `quantile_from_tdigest` reduce with on the Python side -- sums
+ * pairwise above 8 elements, and a compiler is free to contract a
+ * multiply-add; either moves the last bits. So the contract against the
+ * reference is 1e-6 relative, not bit-identity (observed <= 1e-12).
+ */
 export function totalWeight(digest: Digest): number {
   let total = 0;
   for (let i = 0; i < digest.weights.length; i++) {
