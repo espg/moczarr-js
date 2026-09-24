@@ -148,7 +148,8 @@ count under `counts`, a photoelectron estimate under `flux`.
   every populated cell of the ragged arrays those cases read byte-exact
   against the committed `*.expected.json`.
 - t-digest kernels: `moczarr.tdigest` / `moczarr.hhdc` outputs over those
-  same digests plus edge cases, asserted to 1e-6 relative (observed
+  same digests plus edge cases, asserted to 1e-6 relative with a 1e-6
+  absolute floor (observed
   ≤ 1e-12; the residual is summation order — numpy's `sum()` is pairwise
   above 8 elements where these kernels sum sequentially — plus any FMA
   contraction), regenerable with `scripts/generate_tdigest_fixtures.py`.
