@@ -153,6 +153,19 @@ describe("chunkZRange parity (moczarr.hhdc.chunk_z_range)", () => {
       chunkZRange([digestFromCell([])], { nBins: 8, resolution: 1 }),
     ).toThrow(/no populated cells/);
   });
+
+  // A spread over the per-cell bounds blows the engine's argument limit
+  // well below an o9 leaf's 4^9 = 262,144 cells.
+  it("folds the bounds of 200,000 cells without a spread", () => {
+    const many = Array.from({ length: 200_000 }, (_, i) =>
+      digestFromCell([[i % 100, 1]]),
+    );
+    expect(chunkZRange(many, { nBins: 256, resolution: 1 })).toEqual({
+      zLo: 0,
+      nBins: 256,
+      resolution: 1,
+    });
+  });
 });
 
 describe("castToBins (the read_tensors twin)", () => {

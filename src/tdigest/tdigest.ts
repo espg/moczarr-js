@@ -303,20 +303,27 @@ export function chunkZRange(
     top = 0.95,
     fit = "raise",
   } = options;
-  const bounds: [number, number][] = [];
+  // Folded in the loop, never `Math.min(...bounds)`: a block carries one
+  // bound per populated cell (4^9 = 262,144 at an o9 leaf), well past the
+  // engine's argument limit.
+  let lo = Infinity;
+  let hi = -Infinity;
+  let populated = 0;
   for (let i = 0; i < digests.length; i++) {
     const b = tailBounds(digests[i], bottom, top);
     if (b !== null) {
-      bounds.push(b);
+      populated++;
+      if (b[0] < lo) lo = b[0];
+      if (b[1] > hi) hi = b[1];
     }
   }
-  if (bounds.length === 0) {
+  if (populated === 0) {
     throw new Error(
       "chunk has no populated cells with a finite quantile range",
     );
   }
-  const zLo = Math.floor(Math.min(...bounds.map((b) => b[0])));
-  const zHi = Math.ceil(Math.max(...bounds.map((b) => b[1])));
+  const zLo = Math.floor(lo);
+  const zHi = Math.ceil(hi);
   const needed = zHi - zLo;
   const window = nBins * resolution;
   if (fit === "collapse_bins") {
