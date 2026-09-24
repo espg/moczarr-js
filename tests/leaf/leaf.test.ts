@@ -210,4 +210,12 @@ describe("readDense over a span", () => {
     const ranged = s.log.filter(([, r]) => r !== null);
     expect(ranged).toHaveLength(2); // index suffix + one inner chunk
   });
+
+  it("forwards an AbortSignal to the dense half", async () => {
+    const exp = expected("minimal");
+    const leaf = await openLeaf(new FileStore(`${SPEC_ROOT}minimal`), exp.leaf);
+    await expect(
+      leaf.readDense("count", [12, 16], { signal: AbortSignal.abort() }),
+    ).rejects.toThrow();
+  });
 });

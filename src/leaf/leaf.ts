@@ -123,26 +123,30 @@ export class Leaf {
   /** A dense field as a zarrita `Array` (zarrita must be installed). */
   async dense(
     field: string,
+    opts?: GetOptions,
   ): Promise<zarrita.Array<zarrita.DataType, AsyncReadable>> {
     const zarr = await import("zarrita");
     const location = zarr.root(this.store).resolve(this.arrayPath(field));
-    return zarr.open.v3(location, { kind: "array" });
+    return zarr.open.v3(location, { kind: "array", signal: opts?.signal });
   }
 
   /**
    * A dense field's values over the cell span `[start, stop)` (the whole
    * axis by default), via `zarrita.get` -- only the covering inner chunks
-   * are fetched under `sharding_indexed`.
+   * are fetched under `sharding_indexed`. `opts.signal` cancels the dense
+   * half the same way it cancels a ragged read.
    */
   async readDense(
     field: string,
     span?: [number, number],
+    opts?: GetOptions,
   ): Promise<DenseValues> {
     const zarr = await import("zarrita");
-    const array = await this.dense(field);
+    const array = await this.dense(field, opts);
     const chunk = await zarr.get(
       array,
       span ? [zarr.slice(span[0], span[1])] : null,
+      opts,
     );
     return {
       data: chunk.data as ArrayLike<number | bigint>,
