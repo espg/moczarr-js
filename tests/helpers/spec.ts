@@ -22,6 +22,9 @@ export interface Expected {
   chunks_per_shard: number;
   empty_chunk: number;
   cells: ExpectedCell[];
+  /** The section 2.0 declaration, on the fixtures that carry one (flux/). */
+  weights?: string;
+  gain?: Record<string, unknown>;
   column?: { groups: Record<string, Record<string, unknown[]>> };
 }
 

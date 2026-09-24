@@ -4,7 +4,8 @@
  * committed expectations byte-exactly (float32 / uint64, no tolerance).
  * minimal/ pins the empty inner chunk (ordinal 2, absent from the shard
  * index) and empty cells inside populated chunks; kitchen_sink/ the
- * row-aligned located siblings and the composition word; column/ the
+ * row-aligned located siblings of both strata and the composition word;
+ * flux/ the section 2.0 `weights` / `gain` declaration; column/ the
  * unsharded per-chunk geometry.
  */
 import { describe, expect, it } from "vitest";
@@ -109,27 +110,30 @@ describe("openLeaf on minimal/", () => {
 describe("openLeaf on kitchen_sink/ (located strata + composition)", () => {
   const exp = expected("kitchen_sink");
 
-  it("binds the located sibling by attrs and keeps it row-aligned", async () => {
-    const leaf = await openLeaf(
-      new FileStore(`${SPEC_ROOT}kitchen_sink`),
-      exp.leaf,
-    );
-    const signal = await leaf.ragged("h_tdigest_signal");
-    expect(signal.metadata.locations).toBe("h_tdigest_signal_locations");
-    expect(signal.metadata.weights).toBe("counts");
-    const words = await leaf.ragged(signal.metadata.locations!);
-    expect(words.element).toEqual({ dtype: "uint64", innerShape: [] });
-    const digests = await signal.readCells(0, 16);
-    const locations = await words.readCells(0, 16);
-    for (const cell of exp.cells) {
-      const rows = cell.h_tdigest_signal as number[][];
-      expect(digests[cell.index].data).toEqual(f32(rows));
-      expect(locations[cell.index].shape).toEqual([rows.length]);
-      expect(
-        Array.from(locations[cell.index].data as BigUint64Array, String),
-      ).toEqual(cell.h_tdigest_signal_locations);
-    }
-  });
+  for (const stratum of ["signal", "noise"] as const) {
+    it(`binds the ${stratum} located sibling by attrs and keeps it row-aligned`, async () => {
+      const leaf = await openLeaf(
+        new FileStore(`${SPEC_ROOT}kitchen_sink`),
+        exp.leaf,
+      );
+      const payload = await leaf.ragged(`h_tdigest_${stratum}`);
+      expect(payload.metadata.locations).toBe(`h_tdigest_${stratum}_locations`);
+      expect(payload.metadata.weights).toBe("counts");
+      expect(payload.metadata.gain).toBeNull();
+      const words = await leaf.ragged(payload.metadata.locations!);
+      expect(words.element).toEqual({ dtype: "uint64", innerShape: [] });
+      const digests = await payload.readCells(0, 16);
+      const locations = await words.readCells(0, 16);
+      for (const cell of exp.cells) {
+        const rows = cell[`h_tdigest_${stratum}`] as number[][];
+        expect(digests[cell.index].data).toEqual(f32(rows));
+        expect(locations[cell.index].shape).toEqual([rows.length]);
+        expect(
+          Array.from(locations[cell.index].data as BigUint64Array, String),
+        ).toEqual(cell[`h_tdigest_${stratum}_locations`]);
+      }
+    });
+  }
 
   it("reads the composition words densely as uint64", async () => {
     const leaf = await openLeaf(
@@ -142,6 +146,31 @@ describe("openLeaf on kitchen_sink/ (located strata + composition)", () => {
         cell.composition,
       );
     }
+  });
+});
+
+describe("openLeaf on flux/ (the section 2.0 weights declaration)", () => {
+  const exp = expected("flux");
+
+  it("surfaces weights and gain and decodes every populated cell", async () => {
+    const leaf = await openLeaf(new FileStore(`${SPEC_ROOT}flux`), exp.leaf);
+    const flux = await leaf.ragged("rx_flux");
+    expect(flux.metadata.weights).toBe("flux");
+    expect(flux.metadata.gain).toEqual(exp.gain);
+    const cells = await flux.readCells(0, flux.length);
+    expect(cells).toHaveLength(16);
+    const populated = new Map(
+      exp.cells.map((c) => [c.index, c.rx_flux as number[][]]),
+    );
+    cells.forEach((cell, i) => {
+      const rows = populated.get(i);
+      if (rows === undefined) {
+        expect(cell.shape).toEqual([0, 2]);
+      } else {
+        expect(cell.shape).toEqual([rows.length, 2]);
+        expect(cell.data).toEqual(f32(rows));
+      }
+    });
   });
 });
 

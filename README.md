@@ -135,8 +135,11 @@ count under `counts`, a photoelectron estimate under `flux`.
 - vlen framing: byte vectors written by zarr-vlen-ndarray (golden framing
   incl. the empty element, seeded float32/uint64 cells, raw and through
   zstd-3), regenerable with `scripts/generate_vlen_fixtures.py`.
-- Leaf reads: zagg's §7 conformance fixtures (`tests/data/spec/`), every
-  populated cell byte-exact against the committed `*.expected.json`.
+- Leaf reads: zagg's §7 conformance fixtures (`tests/data/spec/`) —
+  `minimal/`, `kitchen_sink/` (both strata with their located siblings),
+  `flux/` (the §2.0 `weights` / `gain` declaration) and `column/` — with
+  every populated cell of the ragged arrays those cases read byte-exact
+  against the committed `*.expected.json`.
 - t-digest kernels: `moczarr.tdigest` / `moczarr.hhdc` outputs over those
   same digests plus edge cases, asserted to 1e-6 relative (observed
   ≤ 1e-12; the residual is numpy's FMA contraction), regenerable with
